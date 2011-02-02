@@ -2,7 +2,7 @@
 #include "headers/SDL/SDL_main.h"
 #include "headers/SDL/SDL_opengl.h"
 #include <stdio.h>
-
+//
 static int user_exit = 0;
 
 int SDL_main(int argc, char* argv[])
