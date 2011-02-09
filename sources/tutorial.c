@@ -11,7 +11,7 @@
 static int user_exit = 0;
 
 static float mouse_x, mouse_y;
-static float zPos = -2;
+static float zPos = -2, xPos = 0, yPos = 0;
 
 //Eventually these will be moved out of here into a "rendering" subsystem, which is why they are prefixed r_.
 static void r_init();
@@ -23,6 +23,9 @@ static void input_update();
 static void input_keyDown(SDLKey k);
 static void input_keyUp(SDLKey k);
 static void input_mouseMove(int xPos, int yPos);
+static void make_cube(int xPos, int yPos, int zPos, float width);
+static void make_moving_cube(int xPos, int yPos, int zPos, float width);
+static void make_rect(int xPos, int yPos, int zPos, float xWidth, float yWidth, float zWidth);
 
 /*
  * SDL_main
@@ -135,9 +138,17 @@ static void input_mouseMove(int xPos, int yPos)
 static void input_update()
 {
 	if(keys_down['w'])
-		zPos += .005;
+		yPos += .005;
 	if(keys_down['s'])
+		yPos -= .005;
+	if(keys_down['a'])
+		xPos -= .005;
+	if(keys_down['d'])
+		xPos += .005;
+	if(keys_down['i'])
 		zPos -= .005;
+	if(keys_down['k'])
+		zPos += .005;
 
 }
 
@@ -162,23 +173,171 @@ static void r_drawFrame()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glColor3f(0.0,1.0,0.0);
-	glBegin(GL_QUAD_STRIP);
-		glVertex3f( 0.5+mouse_x,-0.5+mouse_y, -4.0);
-		glVertex3f(-0.5+mouse_x,-0.5+mouse_y, -4.0);
-		glVertex3f(-0.5+mouse_x, 0.5+mouse_y, -4.0);
-		glVertex3f( 0.5+mouse_x, 0.5+mouse_y, -4.0);
-		glVertex3f(-0.5+mouse_x, 0.5+mouse_y, -5.0);
-		glVertex3f( 0.5+mouse_x, 0.5+mouse_y, -5.0);
-	glEnd();
+	/*glColor3f(0.0,1.0,0.0);
+	make_cube(0, 0, -4.5, .25);
 
-	//White triangle
+	glColor3f(0.0,0.0,1.0);
+	make_cube(-3, -3, -7, .25);
+
+	glColor3f(1.0,0.0,0.0);
+	make_cube(3, 2, -5.25, .25);
+
+	glColor3f(0.6,0.0,0.6);
+	make_cube(-3.5, 2.3, -5, .25);
+
+	//triangle
 	glColor3f(0.0, 0.0, 1.0);
 	glBegin(GL_TRIANGLES);
-		glVertex3f(-0.5+mouse_x, -0.5-mouse_y, zPos);
-		glVertex3f( 0.5+mouse_x, -0.5-mouse_y, zPos);
-		glVertex3f( 0.0+mouse_x,  0.5-mouse_y, zPos);
+		glVertex3f(-0.5+mouse_x+xPos, -0.5+mouse_y+yPos, zPos);
+		glColor3f(1.0,0.0,0.0);
+		glVertex3f( 0.5+mouse_x+xPos, -0.5+mouse_y+yPos, zPos);
+		glColor3f(0.0,1.0,0.0);
+		glVertex3f( 0.0+mouse_x+xPos,  0.5+mouse_y+yPos, zPos);
+	glEnd();*/
+
+	//background
+	glColor3f(0,0,1.0);
+	make_rect(0,0,-10,11,10,.2);
+
+	//backboard
+	glColor3f(0.2,0.4,0.4);
+	make_rect(0,2,-6,3,2,.2);
+
+	//post
+	glColor3f(0.6,0.6,0.6);
+	make_rect(0,0,-6,.2,4,.2);
+
+	//square on board
+	glBegin(GL_QUADS);
+		glVertex3f(-.6+mouse_x,1+mouse_y,-5.8);
+		glVertex3f(-.55+mouse_x,1+mouse_y,-5.8);
+		glVertex3f(-.6+mouse_x,1.7+mouse_y,-5.8);
+		glVertex3f(-.55+mouse_x,1.7+mouse_y,-5.8);
+
+		glVertex3f(-.55+mouse_x,1.7+mouse_y,-5.8);
+		glVertex3f(-.55+mouse_x,1.65+mouse_y,-5.8);
+		glVertex3f(.55+mouse_x,1.7+mouse_y,-5.8);
+		glVertex3f(.55+mouse_x,1.65+mouse_y,-5.8);
+
+		glVertex3f(.6+mouse_x,1+mouse_y,-5.8);
+		glVertex3f(.55+mouse_x,1+mouse_y,-5.8);
+		glVertex3f(.6+mouse_x,1.7+mouse_y,-5.8);
+		glVertex3f(.55+mouse_x,1.7+mouse_y,-5.8);
 	glEnd();
 
+	//rim
+	glColor3f(1.0,1.0,1.0);
+	glBegin(GL_QUADS);
+		glVertex3f(-.4+mouse_x,1+mouse_y,-5.8);
+		glVertex3f(-.4+mouse_x,1.1+mouse_y,-5.8);
+		glVertex3f(-.4+mouse_x,1.1+mouse_y,-5.3);
+		glVertex3f(-.4+mouse_x,1+mouse_y,-5.3);
+
+		glVertex3f(-.4+mouse_x,1+mouse_y,-5.3);
+		glVertex3f(-.4+mouse_x,1.1+mouse_y,-5.3);
+		glVertex3f(.4+mouse_x,1.1+mouse_y,-5.3);
+		glVertex3f(.4+mouse_x,1+mouse_y,-5.3);
+
+		glVertex3f(.4+mouse_x,1+mouse_y,-5.3);
+		glVertex3f(.4+mouse_x,1.1+mouse_y,-5.3);
+		glVertex3f(.4+mouse_x,1.1+mouse_y,-5.8);
+		glVertex3f(.4+mouse_x,1+mouse_y,-5.8);
+	glEnd();
+
+	//ground/court
+	glColor3f(0,0.4,0);
+	make_rect(0,-2,-4,10,.2,10);
+
+	glColor3f(1.0,1.0,0.0);
+	make_moving_cube(0,0,-2,.3);
+
 	SDL_GL_SwapBuffers();
+}
+
+static void make_cube(int xPos, int yPos, int zPos, float width){
+	width = width/2;
+
+	glBegin(GL_QUAD_STRIP);
+		glVertex3f( width+mouse_x+xPos,-width+mouse_y+yPos, zPos+width);
+		glVertex3f( width+mouse_x+xPos,-width+mouse_y+yPos, zPos-width);
+		glVertex3f(-width+mouse_x+xPos,-width+mouse_y+yPos, zPos+width);
+		glVertex3f(-width+mouse_x+xPos,-width+mouse_y+yPos, zPos-width);
+		glVertex3f(-width+mouse_x+xPos, width+mouse_y+yPos, zPos+width);
+		glVertex3f(-width+mouse_x+xPos, width+mouse_y+yPos, zPos-width);
+		glVertex3f( width+mouse_x+xPos, width+mouse_y+yPos, zPos+width);
+		glVertex3f( width+mouse_x+xPos, width+mouse_y+yPos, zPos-width);
+		glVertex3f( width+mouse_x+xPos,-width+mouse_y+yPos, zPos+width);
+		glVertex3f( width+mouse_x+xPos,-width+mouse_y+yPos, zPos-width);
+	glEnd();
+
+	glBegin(GL_QUADS);
+		glVertex3f( width+mouse_x+xPos,-width+mouse_y+yPos, zPos+width);
+		glVertex3f(-width+mouse_x+xPos,-width+mouse_y+yPos, zPos+width);
+		glVertex3f(-width+mouse_x+xPos, width+mouse_y+yPos, zPos+width);
+		glVertex3f( width+mouse_x+xPos, width+mouse_y+yPos, zPos+width);
+		glVertex3f( width+mouse_x+xPos,-width+mouse_y+yPos, zPos-width);
+		glVertex3f(-width+mouse_x+xPos,-width+mouse_y+yPos, zPos-width);
+		glVertex3f(-width+mouse_x+xPos, width+mouse_y+yPos, zPos-width);
+		glVertex3f( width+mouse_x+xPos, width+mouse_y+yPos, zPos-width);
+	glEnd();
+
+}
+
+static void make_rect(int xPos, int yPos, int zPos, float xWidth, float yWidth, float zWidth){
+	xWidth = xWidth/2;
+	yWidth = yWidth/2;
+	zWidth = zWidth/2;
+
+	glBegin(GL_QUAD_STRIP);
+		glVertex3f( xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos+zWidth);
+		glVertex3f( xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos-zWidth);
+		glVertex3f(-xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos+zWidth);
+		glVertex3f(-xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos-zWidth);
+		glVertex3f(-xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos+zWidth);
+		glVertex3f(-xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos-zWidth);
+		glVertex3f( xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos+zWidth);
+		glVertex3f( xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos-zWidth);
+		glVertex3f( xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos+zWidth);
+		glVertex3f( xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos-zWidth);
+	glEnd();
+
+	glBegin(GL_QUADS);
+		glVertex3f( xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos+zWidth);
+		glVertex3f(-xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos+zWidth);
+		glVertex3f(-xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos+zWidth);
+		glVertex3f( xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos+zWidth);
+		glVertex3f( xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos-zWidth);
+		glVertex3f(-xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos-zWidth);
+		glVertex3f(-xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos-zWidth);
+		glVertex3f( xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos-zWidth);
+	glEnd();
+}
+
+static void make_moving_cube(int xPos1, int yPos1, int zPos1, float width){
+	width = width/2;
+
+	glBegin(GL_QUAD_STRIP);
+		glVertex3f( width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos+width);
+		glVertex3f( width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos-width);
+		glVertex3f(-width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos+width);
+		glVertex3f(-width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos-width);
+		glVertex3f(-width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos+width);
+		glVertex3f(-width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos-width);
+		glVertex3f( width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos+width);
+		glVertex3f( width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos-width);
+		glVertex3f( width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos+width);
+		glVertex3f( width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos-width);
+	glEnd();
+
+	glBegin(GL_QUADS);
+		glVertex3f( width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos+width);
+		glVertex3f(-width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos+width);
+		glVertex3f(-width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos+width);
+		glVertex3f( width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos+width);
+		glVertex3f( width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos-width);
+		glVertex3f(-width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos-width);
+		glVertex3f(-width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos-width);
+		glVertex3f( width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos-width);
+	glEnd();
+
 }
