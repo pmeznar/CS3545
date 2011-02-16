@@ -271,15 +271,16 @@ static void camera_translateForward(float dist)
 	//sin(90degrees)? cos(0degrees)? cos(90degrees)?
 	float dx, dy, dz;
 
+	//Angles between XZ and Y?
 	//Free
-	//dx =  ???;
-	//dy =  ???;
-	//dz =  ???;
+	//dx =  cos(camera.angles_rad[_X]) * dist * sin(camera.angles_rad[_Y]);
+	//dy =  -dist * sin(camera.angles_rad[_X]);
+	//dz =  cos(camera.angles_rad[_X]) * -dist * cos(camera.angles_rad[_Y]);
 
 	//Person
-	//dx =  ???;
-	//dy =  ???;
-	//dz =  ???;
+	dx =  dist * sin(camera.angles_rad[_Y]);
+	dy =  0;
+	dz =  -dist * cos(camera.angles_rad[_Y]);
 
 	camera.position[_X] += dx;
 	camera.position[_Y] += dy;
@@ -288,7 +289,15 @@ static void camera_translateForward(float dist)
 
 static void camera_translateStrafe(float dist)
 {
-	//This function will look very similar to your translateForward function.
+	float dx, dy, dz;
+
+	dx =  -dist * cos(camera.angles_rad[_Y]);
+	dy =  0;
+	dz =  -dist * sin(camera.angles_rad[_Y]);
+
+	camera.position[_X] += dx;
+	camera.position[_Y] += dy;
+	camera.position[_Z] += dz;
 }
 
 
@@ -388,7 +397,7 @@ static void r_setupModelview()
 	sinY = sin(camera.angles_rad[_Y]);
 	cosY = cos(camera.angles_rad[_Y]);
 
-	yRotMatrix[1] = cosY;
+	yRotMatrix[0] = cosY;
 	yRotMatrix[2] = -sinY;
 	yRotMatrix[8] = sinY;
 	yRotMatrix[10] = cosY;
