@@ -163,13 +163,13 @@ static void input_update()
 	//WASD
 	//The input values are arbitrary
 	if(keys_down[SDLK_w])
-		camera_translateForward(0.01);
+		camera_translateForward(0.5);
 	if(keys_down[SDLK_s])
-		camera_translateForward(-0.01);
+		camera_translateForward(-0.5);
 	if(keys_down[SDLK_a])
-		camera_translateStrafe(0.01);
+		camera_translateStrafe(0.5);
 	if(keys_down[SDLK_d])
-		camera_translateStrafe(-0.01);
+		camera_translateStrafe(-0.5);
 
 	//Reset, sometimes you can get pretty lost...
 	if(keys_down[SDLK_r])
@@ -452,16 +452,18 @@ static void r_init()
 	//You might want to play with changing the modes
 	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-	r_image_loadTGA("textures\\ground.tga",
+	r_image_loadTGA("textures\\submarine.tga",
 			&myGLTexture[0], &myTexWidth[0], &myTexHeight[0], &myTexBPP[0]);
 	r_image_loadTGA("C:\\Users\\Philip\\Documents\\AppState\\S2011\\CS3545\\eclipse\\CS3545\\textures\\ground.tga",
 				&myGLTexture[1], &myTexWidth[1], &myTexHeight[1], &myTexBPP[1]);
 	r_image_loadTGA("textures\\back.tga",
 				&myGLTexture[2], &myTexWidth[2], &myTexHeight[2], &myTexBPP[2]);
 
-	renderer_model_loadASE("\\ASEmodels\\submarine.ASE", efalse);
+	renderer_model_loadASE("ASEmodels\\submarine.ASE", efalse);
 
 	camera_init();
+	camera.position[_Z] += 200;
+
 
 	r_setupProjection();
 }
@@ -532,9 +534,13 @@ static void r_drawFrame()
 	//Orient and position the camera
 	r_setupModelview();
 
+	glEnable(GL_TEXTURE_2D);
+
 	glColor3f(0.5,0.5,0.5);
+	glBindTexture(GL_TEXTURE_2D, myGLTexture[0]);
 	renderer_model_drawASE(0);
 
+	glEnable(GL_TEXTURE_2D);
 	glColor3f(0,0,1.0);
 	make_rect(0,0,-10,11,10,.2);
 
