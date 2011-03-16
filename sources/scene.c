@@ -1,41 +1,35 @@
 /*
 ===========================================================================
-File:		 camera.c
-Author: 	 Clinton Freeman
-Created on:  Feb 7, 2011
-Description: This file is designed to help you create a simple first person
-			 camera in your program. You are free to use the entire file
-			 as a base, or to pick and choose bits that you find useful.
-			 The main functions to pay attention to are:
-			 	 - input_mouseMove
-			 	 - input_update
-			 	 - camera_translateForward
-			 	 - camera_translateStrafe
-			 	 - r_setupModelview
-			 Of course, you should spend some time looking at how each
-			 function interacts to create the effect of a camera. Here are
-			 some ideas that might be worthy of extra credit (to be done
-			 after you finish the required part):
-			 	 - learn about quaternions and use them instead of Euler
-			 	   angles to implement the same functionality. (recommended!)
-			 	 - create an isometric or third person camera.
-			 	 - investigate splines and how they are related to cinematic
-			 	   camera paths, produce a simple demo.
+File:		main.c
+Author: 	Clinton Freeman
+Created on:  	Feb 7, 2011
+Description:	Texturing demo - you will need to change the path to the texture
+		before this will work...
 ===========================================================================
 */
 
 #include "headers/SDL/SDL.h"
 #include "headers/SDL/SDL_main.h"
 #include "headers/SDL/SDL_opengl.h"
+
 #include "headers/mathlib.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
 
-//New defines that we can use inside of mouse input handling to avoid magic numbers
 #define WINDOW_WIDTH  1024
 #define WINDOW_HEIGHT 768
 
+static int user_exit = 0;
+
+int myGLTexture[3], myTexWidth[3], myTexHeight[3], myTexBPP[3];
+static void make_cube(int xPos, int yPos, int zPos, float width);
+static void make_moving_cube(int xPos, int yPos, int zPos, float width);
+static void make_rect(int xPos, int yPos, int zPos, float xWidth, float yWidth, float zWidth);
+
 //INPUT DECLARATIONS
-static int keys_down[256];
+
 static void input_keyDown(SDLKey k);
 static void input_keyUp(SDLKey k);
 static void input_mouseMove(int dx, int dy);
@@ -61,24 +55,17 @@ static void camera_translateStrafe(float dist);
 
 //RENDERER DECLARATIONS
 
+//NEW TEXTURE STUFF
+static void r_image_loadTGA(char *name, int *glTexID, int *width, int *height, int *bpp);
+
 static void r_init();
 static void r_setupProjection();
 static void r_setupModelview();
 static void r_drawFrame();
 
-//Means of the user exiting the main loop
-static int user_exit = 0;
-
-static float mouse_x, mouse_y;
-static float zPos = -2, xPos = 0, yPos = 0;
-
-static void make_cube(int xPos, int yPos, int zPos, float width);
-static void make_moving_cube(int xPos, int yPos, int zPos, float width);
-static void make_rect(int xPos, int yPos, int zPos, float xWidth, float yWidth, float zWidth);
-
 /*
  * SDL_main
- * Program entry point
+ * Program entry point.
  */
 int SDL_main(int argc, char* argv[])
 {
@@ -102,7 +89,6 @@ int SDL_main(int argc, char* argv[])
 		return 1;
 	}
 
-	//Renderer
 	r_init();
 
 	while(!user_exit)
@@ -126,12 +112,7 @@ int SDL_main(int argc, char* argv[])
 			}
 		}
 
-
-
-		//Respond to keys being down
 		input_update();
-
-		//Draw the scene
 		r_drawFrame();
 	}
 
@@ -163,8 +144,8 @@ void input_mouseMove(int dx, int dy)
 	dx -= halfWinWidth; dy -= halfWinHeight;
 
 	//Feed the deltas to the camera
-	camera_rotateX(dy/2.0);
-	camera_rotateY(dx/2.0);
+	camera_rotateX(-dy/2.0);
+	camera_rotateY(-dx/2.0);
 
 	//Reset cursor to center
 	SDL_WarpMouse(halfWinWidth, halfWinHeight);
@@ -178,13 +159,13 @@ static void input_update()
 	//WASD
 	//The input values are arbitrary
 	if(keys_down[SDLK_w])
-		camera_translateForward(-0.01);
-	if(keys_down[SDLK_s])
 		camera_translateForward(0.01);
+	if(keys_down[SDLK_s])
+		camera_translateForward(-0.01);
 	if(keys_down[SDLK_a])
-		camera_translateStrafe(-0.01);
-	if(keys_down[SDLK_d])
 		camera_translateStrafe(0.01);
+	if(keys_down[SDLK_d])
+		camera_translateStrafe(-0.01);
 
 	//Reset, sometimes you can get pretty lost...
 	if(keys_down[SDLK_r])
@@ -232,55 +213,23 @@ static void camera_rotateZ(float degree)
 
 static void camera_translateForward(float dist)
 {
-	//If we wish to move forward, we must first calculate
-	//a movement vector to add to our current position.
-	//Depending upon the type of camera, this behavior
-	//will differ. "Free" cameras typically allow the
-	//user to fly around wherever they are looking.
-	//"Person" cameras generally do not take into
-	//account elevation, since in real life when you look
-	//up you do not fly upward (although this would be awesome).
+	float sinX, cosX, sinY, cosY, dx, dy, dz;
 
-	//Since the only information we're storing about the
-	//camera is the orientation in terms of degrees of rotation
-	//about each cardinal axis, this representation must be converted
-	//to a cartesian vector.
+	sinY = sin(camera.angles_rad[_Y]);
+	cosY = cos(camera.angles_rad[_Y]);
 
-	//The conversion will follow a similar pattern to your standard
-	//polar -> cartesian conversion, although this can be a little
-	//confusing since we are looking down the negative Z axis.
+	sinX = sin(camera.angles_rad[_X]);
+	cosX = cos(camera.angles_rad[_X]);
 
-	//Since we know that the Y axis points "up", the angle of rotation
-	//around this axis will correspond to the theta found in typical polar
-	//coordinates. You will need to play around with making terms negative
-	//or positive, etc. in order to figure out exactly what the correct
-	//conversion is. Although you could figure this out a priori using
-	//diagrams and such, it is much easier and faster to use a guess
-	//and check method, since you will know you've found the correct
-	//configuration when it behaves how you want.
-
-	//Once you have the "person" camera working, you can then begin
-	//thinking about how to add in the Y (up) component. You know that
-	//if the angle between the XZ plane and the Y axis is zero, the
-	//vector should not have a Y component, and but the vector inside
-	//the XZ plane should have a magnitude of one. Additionally, you
-	//know that when the angle is 90 (i.e. you're looking "up"), the
-	//Y component should be 1.0 and the magnitude of the X and Z components
-	//should be 0.0. Given this, think of a term that you could multiply
-	//each component by to achieve this effect. What is sin(0degrees)?
-	//sin(90degrees)? cos(0degrees)? cos(90degrees)?
-	float dx, dy, dz;
-
-	//Angles between XZ and Y?
 	//Free
-	//dx =  cos(camera.angles_rad[_X]) * dist * sin(camera.angles_rad[_Y]);
-	//dy =  -dist * sin(camera.angles_rad[_X]);
-	//dz =  cos(camera.angles_rad[_X]) * -dist * cos(camera.angles_rad[_Y]);
+	dx =  -sinY * cosX * dist;
+	dy =  sinX * dist;
+	dz =  -cosY * cosX * dist;
 
 	//Person
-	dx =  dist * sin(camera.angles_rad[_Y]);
-	dy =  0;
-	dz =  -dist * cos(camera.angles_rad[_Y]);
+	//dx =  -sinY * dist;
+	//dy =  0.0;
+	//dz =  -cosY * dist;
 
 	camera.position[_X] += dx;
 	camera.position[_Y] += dy;
@@ -289,18 +238,197 @@ static void camera_translateForward(float dist)
 
 static void camera_translateStrafe(float dist)
 {
-	float dx, dy, dz;
+	float sinX, cosX, sinY, cosY, dx, dy, dz, yPlus90;
 
-	dx =  -dist * cos(camera.angles_rad[_Y]);
-	dy =  0;
-	dz =  -dist * sin(camera.angles_rad[_Y]);
+	yPlus90 = (camera.angles_deg[_Y] + 90.0) * M_PI_DIV180;
+
+	sinY = sin(yPlus90);
+	cosY = cos(yPlus90);
+
+	sinX = sin(camera.angles_rad[_X]);
+	cosX = cos(camera.angles_rad[_X]);
+
+	//Free
+	dx =  -sinY * cosX * dist;
+	dy =  0.0;
+	dz =  -cosY * cosX * dist;
+
+	//Person
+	//dx =  -sinY * dist;
+	//dy =  0.0;
+	//dz =  -cosY * dist;
 
 	camera.position[_X] += dx;
 	camera.position[_Y] += dy;
 	camera.position[_Z] += dz;
 }
 
+/*
+===========================================================================
+	TGA LOADING
+===========================================================================
+*/
 
+#define HEADER_SIZE 18
+
+typedef unsigned char byte;
+
+typedef struct
+{
+	unsigned char 	idLength, colormapType, imageType;
+	unsigned char	colormapSize;
+	unsigned short	colormapIndex, colormapLength;
+	unsigned short	xOrigin, yOrigin, width, height;
+	unsigned char	pixelSize, attributes;
+}
+tgaHeader_t;
+
+/*
+ * Function: renderer_img_loadTGA
+ * Description: Loads a TARGA image file, uploads to GL, and returns the
+ * texture ID. Only supports 24/32 bit.
+ */
+static void r_image_loadTGA(char *name, int *glTexID, int *width, int *height, int *bpp)
+{
+	int				dataSize, rows, cols, i, j;
+	GLuint			type;
+	byte			*buf, *imageData, *pixelBuf, red, green, blue, alpha;
+
+	FILE 			*file;
+	tgaHeader_t		header;
+	struct stat 	st;
+
+	file = fopen(name, "rb");
+
+	if(file == NULL)
+	{
+		printf("Loading TGA: %s, failed. Null file pointer.\n", name);
+		return;
+	}
+
+	if(stat(name, &st))
+	{
+		printf("Loading TGA: %s, failed. Could not determine file size.\n", name);
+		return;
+	}
+
+	if(st.st_size < HEADER_SIZE)
+	{
+		printf("Loading TGA: %s, failed. Header too short.\n", name);
+		return;
+	}
+
+	buf = (byte *)malloc(st.st_size);
+	fread(buf, sizeof(byte), st.st_size, file);
+
+	fclose(file);
+
+	memcpy(&header.idLength, 	 	&buf[0],  1);
+	memcpy(&header.colormapType, 	&buf[1],  1);
+	memcpy(&header.imageType, 		&buf[2],  1);
+	memcpy(&header.colormapIndex, 	&buf[3],  2);
+	memcpy(&header.colormapLength,  &buf[5],  2);
+	memcpy(&header.colormapSize, 	&buf[7],  1);
+	memcpy(&header.xOrigin,			&buf[8],  2);
+	memcpy(&header.yOrigin,			&buf[10], 2);
+	memcpy(&header.width,			&buf[12], 2);
+	memcpy(&header.height,			&buf[14], 2);
+	memcpy(&header.pixelSize,		&buf[16], 1);
+	memcpy(&header.attributes,		&buf[17], 1);
+
+	//Advance past the header
+	buf += HEADER_SIZE;
+
+	if(header.pixelSize != 24 && header.pixelSize != 32)
+	{
+		printf("Loading TGA: %s, failed. Only support 24/32 bit images.\n", name);
+		return;
+	}
+	else if(header.pixelSize == 24)
+		type = GL_RGB;
+	else
+		type = GL_RGBA;
+
+	//Determine size of image data chunk in bytes
+	dataSize = header.width * header.height * (header.pixelSize / 8);
+
+	//Set up our texture
+	*bpp 	 	= header.pixelSize;
+	*width  	= header.width;
+	*height 	= header.height;
+
+	imageData = (byte *)malloc(dataSize);
+	rows	  = *height;
+	cols	  = *width;
+
+	if(type == GL_RGB)
+	{
+		for(i = 0; i < rows; i++)
+		{
+			pixelBuf = imageData + (i * cols * 3);
+			for(j = 0; j < cols; j++)
+			{
+				blue 	= *buf++;
+				green 	= *buf++;
+				red		= *buf++;
+
+				*pixelBuf++ = red;
+				*pixelBuf++ = green;
+				*pixelBuf++ = blue;
+			}
+		}
+	}
+	else
+	{
+		for(i = 0; i < rows; i++)
+		{
+			pixelBuf = imageData + (i * cols * 4);
+			for(j = 0; j < cols; j++)
+			{
+				blue 	= *buf++;
+				green 	= *buf++;
+				red		= *buf++;
+				alpha	= *buf++;
+
+				*pixelBuf++ = red;
+				*pixelBuf++ = green;
+				*pixelBuf++ = blue;
+				*pixelBuf++ = alpha;
+			}
+		}
+	}
+
+	//Upload the texture to OpenGL
+	glGenTextures(1, glTexID);
+	glBindTexture(GL_TEXTURE_2D, *glTexID);
+
+	//Default OpenGL settings have GL_TEXTURE_MAG/MIN_FILTER set to use
+	//mipmaps... without these calls texturing will not work properly.
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	//Upload image data to OpenGL
+	glTexImage2D(GL_TEXTURE_2D, 0, type, *width, *height,
+			0, type, GL_UNSIGNED_BYTE, imageData);
+
+	//Header debugging
+	/*
+	printf("Attributes: %d\n", 				header.attributes);
+	printf("Colormap Index: %d\n", 			header.colormapIndex);
+	printf("Colormap Length: %d\n", 		header.colormapLength);
+	printf("Colormap Size: %d\n", 			header.colormapSize);
+	printf("Colormap Type: %d\n", 			header.colormapType);
+	printf("Height: %d\n", 					header.height);
+	printf("Identification Length: %d\n",	header.idLength);
+	printf("Image Type: %d\n", 				header.imageType);
+	printf("Pixel Size: %d\n", 				header.pixelSize);
+	printf("Width: %d\n", 					header.width);
+	printf("X Origin: %d\n", 				header.xOrigin);
+	printf("Y Origin: %d\n", 				header.yOrigin);
+	*/
+}
 
 /*
 ===========================================================================
@@ -315,6 +443,19 @@ static void camera_translateStrafe(float dist)
 static void r_init()
 {
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+
+	//NEW TEXTURE STUFF
+	glEnable(GL_TEXTURE_2D);
+	//You might want to play with changing the modes
+	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+	r_image_loadTGA("C:\\Users\\Philip\\Documents\\AppState\\S2011\\CS3545\\eclipse\\CS3545\\textures\\ground.tga",
+			&myGLTexture[0], &myTexWidth[0], &myTexHeight[0], &myTexBPP[0]);
+	r_image_loadTGA("C:\\Users\\Philip\\Documents\\AppState\\S2011\\CS3545\\eclipse\\CS3545\\textures\\ground.tga",
+				&myGLTexture[1], &myTexWidth[1], &myTexHeight[1], &myTexBPP[1]);
+	r_image_loadTGA("C:\\Users\\Philip\\Documents\\AppState\\S2011\\CS3545\\eclipse\\CS3545\\textures\\back.tga",
+				&myGLTexture[2], &myTexWidth[2], &myTexHeight[2], &myTexBPP[2]);
 
 	camera_init();
 
@@ -340,186 +481,118 @@ static void r_setupModelview()
 {
 	float sinX, cosX, sinY, cosY, sinZ, cosZ;
 
-	//Game Engine Architecture talks about row vector vs column vector
-	//conventions on page 153. It chooses to use row vector
-	//while OpenGL represents vectors as columns. Thus, the
-	//canonical matrices that are given in the book (page 157)
-	//must first be transposed to fit OpenGL's format.
-	//A second complication is that OpenGL differs from C
-	//in that matrices are stored column-major, not row-major.
-	//The Red Book suggests using a flat, 1-dimensional
-	//16 element array instead of the intuitive 4x4 2-dimensional
-	//array you might naturally choose to use. If you choose to
-	//do this, here are the correct indices:
-	//0 4 8  12
-	//1 5 9  13
-	//2 6 10 14
-	//3 7 11 15
+	sinX = sin(-camera.angles_rad[_X]);
+	cosX = cos(-camera.angles_rad[_X]);
 
-	//X rotation matrix from book (for multiplying row vectors rM = r')
-	//1  0      0      0
-	//0  cos(r) sin(r) 0
-	//0 -sin(r) cos(r) 0
-	//0  0      0      1
-	//Transpose (for multiplying column vectors Mc = c')
-	//1 0       0      0
-	//0 cos(r) -sin(r) 0
-	//0 sin(r)  cos(r) 0
-	//0 0       0      1
-	//Indices
-	//0 4 8  12
-	//1 5 9  13
-	//2 6 10 14
-	//3 7 11 15
-	sinX = sin(camera.angles_rad[_X]);
-	cosX = cos(camera.angles_rad[_X]);
-
-	xRotMatrix[5] = cosX;
-	xRotMatrix[6] = sinX;
-	xRotMatrix[9] = -sinX;
+	xRotMatrix[5]  = cosX;
+	xRotMatrix[6]  = sinX;
+	xRotMatrix[9]  = -sinX;
 	xRotMatrix[10] = cosX;
 
-	//Y rotation matrix from book (for multiplying row vectors rM = r')
-	//cos(r) 0 -sin(r) 0
-	//0      1  0      0
-	//sin(r) 0  cos(r) 0
-	//0      0  0      1
-	//Transpose (for multiplying column vectors Mc = c')
-	// cos(r) 0 sin(r) 0
-	// 0      1 0      0
-	//-sin(r) 0 cos(r) 0
-	// 0      0 0      1
-	//Indices
-	//0 4 8  12
-	//1 5 9  13
-	//2 6 10 14
-	//3 7 11 15
-	sinY = sin(camera.angles_rad[_Y]);
-	cosY = cos(camera.angles_rad[_Y]);
+	sinY = sin(-camera.angles_rad[_Y]);
+	cosY = cos(-camera.angles_rad[_Y]);
 
-	yRotMatrix[0] = cosY;
-	yRotMatrix[2] = -sinY;
-	yRotMatrix[8] = sinY;
-	yRotMatrix[10] = cosY;
+	yRotMatrix[0]  =  cosY;
+	yRotMatrix[2]  = -sinY;
+	yRotMatrix[8]  =  sinY;
+	yRotMatrix[10] =  cosY;
 
-	//Z rotation matrix from book (for multiplying row vectors rM = r')
-	// cos(r) sin(r) 0 0
-	//-sin(r) cos(r) 0 0
-	// 0      0      1 0
-	// 0      0      0 1
-	//Transpose (for multiplying column vectors Mc = c')
-	//cos(r) -sin(r) 0 0
-	//sin(r)  cos(r) 0 0
-	//0       0      1 0
-	//0       0      0 1
-	//Indices
-	//0 4 8  12
-	//1 5 9  13
-	//2 6 10 14
-	//3 7 11 15
-	sinZ = sin(camera.angles_rad[_Z]);
-	cosZ = cos(camera.angles_rad[_Z]);
+	sinZ = sin(-camera.angles_rad[_Z]);
+	cosZ = cos(-camera.angles_rad[_Z]);
 
 	zRotMatrix[0] = cosZ;
 	zRotMatrix[1] = sinZ;
 	zRotMatrix[4] = -sinZ;
 	zRotMatrix[5] = cosZ;
 
-	//Translation matrix from book (for multiplying row vectors rM = r')
-	//1 0 0 0
-	//0 1 0 0
-	//0 0 1 0
-	//x y z 1
-	//Transpose (for multiplying column vectors Mc = c')
-	//1 0 0 x
-	//0 1 0 y
-	//0 0 1 z
-	//0 0 0 1
-	//Indices
-	//0 4 8  12
-	//1 5 9  13
-	//2 6 10 14
-	//3 7 11 15
-
-	translateMatrix[12] = camera.position[_X];
-	translateMatrix[13] = camera.position[_Y];
-	translateMatrix[14] = camera.position[_Z];
+	translateMatrix[12] = -camera.position[_X];
+	translateMatrix[13] = -camera.position[_Y];
+	translateMatrix[14] = -camera.position[_Z];
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	glMultMatrixf(yRotMatrix);
 	glMultMatrixf(xRotMatrix);
+	glMultMatrixf(yRotMatrix);
 	glMultMatrixf(zRotMatrix);
 	glMultMatrixf(translateMatrix);
 }
 
-
 /*
  * r_drawFrame
- * Produces a final image of the scene.
+ * Perform any drawing and setup necessary to produce a single frame.
  */
 static void r_drawFrame()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	//Orient and Position the camera
+	//Orient and position the camera
 	r_setupModelview();
 
-	//background
-	glColor3f(0,0,1.0);
-	make_rect(0,0,-10,11,10,.2);
-
-	//backboard
-	glColor3f(0.2,0.4,0.4);
-	make_rect(0,2,-6,3,2,.2);
-
-	//post
-	glColor3f(0.6,0.6,0.6);
-	make_rect(0,0,-6,.2,4,.2);
-
-	//square on board
+	glColor3f(0.0, 0.0, 1.0);
 	glBegin(GL_QUADS);
-		glVertex3f(-.6+mouse_x,1+mouse_y,-5.8);
-		glVertex3f(-.55+mouse_x,1+mouse_y,-5.8);
-		glVertex3f(-.6+mouse_x,1.7+mouse_y,-5.8);
-		glVertex3f(-.55+mouse_x,1.7+mouse_y,-5.8);
-
-		glVertex3f(-.55+mouse_x,1.7+mouse_y,-5.8);
-		glVertex3f(-.55+mouse_x,1.65+mouse_y,-5.8);
-		glVertex3f(.55+mouse_x,1.7+mouse_y,-5.8);
-		glVertex3f(.55+mouse_x,1.65+mouse_y,-5.8);
-
-		glVertex3f(.6+mouse_x,1+mouse_y,-5.8);
-		glVertex3f(.55+mouse_x,1+mouse_y,-5.8);
-		glVertex3f(.6+mouse_x,1.7+mouse_y,-5.8);
-		glVertex3f(.55+mouse_x,1.7+mouse_y,-5.8);
+			glTexCoord2f(0.0, 0.0); glVertex3f(-6,-5, -10);
+			glTexCoord2f(1.0, 0.0); glVertex3f( 6,-5, -10);
+			glTexCoord2f(1.0, 1.0); glVertex3f( 6, 5, -10);
+			glTexCoord2f(0.0, 1.0); glVertex3f(-6, 5, -10);
 	glEnd();
 
-	//rim
-	glColor3f(1.0,1.0,1.0);
-	glBegin(GL_QUADS);
-		glVertex3f(-.4+mouse_x,1+mouse_y,-5.8);
-		glVertex3f(-.4+mouse_x,1.1+mouse_y,-5.8);
-		glVertex3f(-.4+mouse_x,1.1+mouse_y,-5.3);
-		glVertex3f(-.4+mouse_x,1+mouse_y,-5.3);
 
-		glVertex3f(-.4+mouse_x,1+mouse_y,-5.3);
-		glVertex3f(-.4+mouse_x,1.1+mouse_y,-5.3);
-		glVertex3f(.4+mouse_x,1.1+mouse_y,-5.3);
-		glVertex3f(.4+mouse_x,1+mouse_y,-5.3);
+	glBindTexture(GL_TEXTURE_2D, myGLTexture[2]);
+	glEnable(GL_TEXTURE_2D);
+		glColor3f(.7,.7,.7);
+		make_rect(0,2,-6,3,2,.2);
+	glDisable(GL_TEXTURE_2D);
 
-		glVertex3f(.4+mouse_x,1+mouse_y,-5.3);
-		glVertex3f(.4+mouse_x,1.1+mouse_y,-5.3);
-		glVertex3f(.4+mouse_x,1.1+mouse_y,-5.8);
-		glVertex3f(.4+mouse_x,1+mouse_y,-5.8);
-	glEnd();
+		//post
+		glColor3f(0.6,0.6,0.6);
+		make_rect(0,0,-6,.2,4,.2);
 
-	//ground/court
-	glColor3f(0,0.4,0);
-	make_rect(0,-2,-4,10,.2,10);
+		//square on board
+		glBegin(GL_QUADS);
+			glVertex3f(-.6,1,-5.8);
+			glVertex3f(-.55,1,-5.8);
+			glVertex3f(-.6,1.7,-5.8);
+			glVertex3f(-.55,1.7,-5.8);
 
-	glColor3f(1.0,1.0,0.0);
-	make_moving_cube(0,0,-2,.3);
+			glVertex3f(-.55,1.7,-5.8);
+			glVertex3f(-.55,1.65,-5.8);
+			glVertex3f(.55,1.7,-5.8);
+			glVertex3f(.55,1.65,-5.8);
+
+			glVertex3f(.6,1,-5.8);
+			glVertex3f(.55,1,-5.8);
+			glVertex3f(.6,1.7,-5.8);
+			glVertex3f(.55,1.7,-5.8);
+		glEnd();
+
+		//rim
+		glColor3f(1.0,1.0,1.0);
+		glBegin(GL_QUADS);
+			glVertex3f(-.4,1,-5.8);
+			glVertex3f(-.4,1.1,-5.8);
+			glVertex3f(-.4,1.1,-5.3);
+			glVertex3f(-.4,1,-5.3);
+
+			glVertex3f(-.4,1,-5.3);
+			glVertex3f(-.4,1.1,-5.3);
+			glVertex3f(.4,1.1,-5.3);
+			glVertex3f(.4,1,-5.3);
+
+			glVertex3f(.4,1,-5.3);
+			glVertex3f(.4,1.1,-5.3);
+			glVertex3f(.4,1.1,-5.8);
+			glVertex3f(.4,1,-5.8);
+		glEnd();
+
+		//ground/court
+		glBindTexture(GL_TEXTURE_2D, myGLTexture[0]);
+		glEnable(GL_TEXTURE_2D);
+			glColor3f(1,1.0,1);
+			make_rect(0,-2,-4,10,.2,10);
+		glDisable(GL_TEXTURE_2D);
+
+		glColor3f(1.0,1.0,0.0);
+		make_moving_cube(0,0,-2,.3);
 
 	SDL_GL_SwapBuffers();
 }
@@ -528,27 +601,27 @@ static void make_cube(int xPos, int yPos, int zPos, float width){
 	width = width/2;
 
 	glBegin(GL_QUAD_STRIP);
-		glVertex3f( width+mouse_x+xPos,-width+mouse_y+yPos, zPos+width);
-		glVertex3f( width+mouse_x+xPos,-width+mouse_y+yPos, zPos-width);
-		glVertex3f(-width+mouse_x+xPos,-width+mouse_y+yPos, zPos+width);
-		glVertex3f(-width+mouse_x+xPos,-width+mouse_y+yPos, zPos-width);
-		glVertex3f(-width+mouse_x+xPos, width+mouse_y+yPos, zPos+width);
-		glVertex3f(-width+mouse_x+xPos, width+mouse_y+yPos, zPos-width);
-		glVertex3f( width+mouse_x+xPos, width+mouse_y+yPos, zPos+width);
-		glVertex3f( width+mouse_x+xPos, width+mouse_y+yPos, zPos-width);
-		glVertex3f( width+mouse_x+xPos,-width+mouse_y+yPos, zPos+width);
-		glVertex3f( width+mouse_x+xPos,-width+mouse_y+yPos, zPos-width);
+		glVertex3f( width+xPos,-width+yPos, zPos+width);
+		glVertex3f( width+xPos,-width+yPos, zPos-width);
+		glVertex3f(-width+xPos,-width+yPos, zPos+width);
+		glVertex3f(-width+xPos,-width+yPos, zPos-width);
+		glTexCoord2f(0.0, 1.0);	glVertex3f(-width+xPos, width+yPos, zPos+width);
+		glTexCoord2f(0.0, 0.0);	glVertex3f(-width+xPos, width+yPos, zPos-width);
+		glTexCoord2f(1.0, 1.0);	glVertex3f( width+xPos, width+yPos, zPos+width);
+		glTexCoord2f(1.0, 0.0);	glVertex3f( width+xPos, width+yPos, zPos-width);
+		glVertex3f( width+xPos,-width+yPos, zPos+width);
+		glVertex3f( width+xPos,-width+yPos, zPos-width);
 	glEnd();
 
 	glBegin(GL_QUADS);
-		glVertex3f( width+mouse_x+xPos,-width+mouse_y+yPos, zPos+width);
-		glVertex3f(-width+mouse_x+xPos,-width+mouse_y+yPos, zPos+width);
-		glVertex3f(-width+mouse_x+xPos, width+mouse_y+yPos, zPos+width);
-		glVertex3f( width+mouse_x+xPos, width+mouse_y+yPos, zPos+width);
-		glVertex3f( width+mouse_x+xPos,-width+mouse_y+yPos, zPos-width);
-		glVertex3f(-width+mouse_x+xPos,-width+mouse_y+yPos, zPos-width);
-		glVertex3f(-width+mouse_x+xPos, width+mouse_y+yPos, zPos-width);
-		glVertex3f( width+mouse_x+xPos, width+mouse_y+yPos, zPos-width);
+		glVertex3f( width+xPos,-width+yPos, zPos+width);
+		glVertex3f(-width+xPos,-width+yPos, zPos+width);
+		glVertex3f(-width+xPos, width+yPos, zPos+width);
+		glVertex3f( width+xPos, width+yPos, zPos+width);
+		glVertex3f( width+xPos,-width+yPos, zPos-width);
+		glVertex3f(-width+xPos,-width+yPos, zPos-width);
+		glVertex3f(-width+xPos, width+yPos, zPos-width);
+		glVertex3f( width+xPos, width+yPos, zPos-width);
 	glEnd();
 
 }
@@ -559,27 +632,28 @@ static void make_rect(int xPos, int yPos, int zPos, float xWidth, float yWidth, 
 	zWidth = zWidth/2;
 
 	glBegin(GL_QUAD_STRIP);
-		glVertex3f( xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos+zWidth);
-		glVertex3f( xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos-zWidth);
-		glVertex3f(-xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos+zWidth);
-		glVertex3f(-xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos-zWidth);
-		glVertex3f(-xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos+zWidth);
-		glVertex3f(-xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos-zWidth);
-		glVertex3f( xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos+zWidth);
-		glVertex3f( xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos-zWidth);
-		glVertex3f( xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos+zWidth);
-		glVertex3f( xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos-zWidth);
+		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos-zWidth);
+		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos+zWidth);
+		glTexCoord2f(0.0, 1.0);glVertex3f(-xWidth+xPos, yWidth+yPos, zPos-zWidth);
+		glTexCoord2f(0.0, 0.0);glVertex3f(-xWidth+xPos, yWidth+yPos, zPos+zWidth);
+		glTexCoord2f(1.0, 1.0);glVertex3f( xWidth+xPos, yWidth+yPos, zPos-zWidth);
+		glTexCoord2f(1.0, 0.0);glVertex3f( xWidth+xPos, yWidth+yPos, zPos+zWidth);
+		glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos-zWidth);
+		glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos+zWidth);
+		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos-zWidth);
+		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos+zWidth);
 	glEnd();
 
 	glBegin(GL_QUADS);
-		glVertex3f( xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos+zWidth);
-		glVertex3f(-xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos+zWidth);
-		glVertex3f(-xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos+zWidth);
-		glVertex3f( xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos+zWidth);
-		glVertex3f( xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos-zWidth);
-		glVertex3f(-xWidth+mouse_x+xPos,-yWidth+mouse_y+yPos, zPos-zWidth);
-		glVertex3f(-xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos-zWidth);
-		glVertex3f( xWidth+mouse_x+xPos, yWidth+mouse_y+yPos, zPos-zWidth);
+		glTexCoord2f(0.0, 0.0);	glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos+zWidth);
+		glTexCoord2f(1.0, 0.0); glVertex3f( xWidth+xPos,-yWidth+yPos, zPos+zWidth);
+		glTexCoord2f(1.0, 1.0);	glVertex3f( xWidth+xPos, yWidth+yPos, zPos+zWidth);
+		glTexCoord2f(0.0, 1.0);	glVertex3f(-xWidth+xPos, yWidth+yPos, zPos+zWidth);
+
+		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos-zWidth);
+		glVertex3f( xWidth+xPos, yWidth+yPos, zPos-zWidth);
+		glVertex3f(-xWidth+xPos, yWidth+yPos, zPos-zWidth);
+		glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos-zWidth);
 	glEnd();
 }
 
@@ -587,27 +661,27 @@ static void make_moving_cube(int xPos1, int yPos1, int zPos1, float width){
 	width = width/2;
 
 	glBegin(GL_QUAD_STRIP);
-		glVertex3f( width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos+width);
-		glVertex3f( width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos-width);
-		glVertex3f(-width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos+width);
-		glVertex3f(-width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos-width);
-		glVertex3f(-width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos+width);
-		glVertex3f(-width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos-width);
-		glVertex3f( width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos+width);
-		glVertex3f( width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos-width);
-		glVertex3f( width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos+width);
-		glVertex3f( width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos-width);
+		glVertex3f( width+xPos1,-width+yPos1, zPos1+width);
+		glVertex3f( width+xPos1,-width+yPos1, zPos1-width);
+		glVertex3f(-width+xPos1,-width+yPos1, zPos1+width);
+		glVertex3f(-width+xPos1,-width+yPos1, zPos1-width);
+		glVertex3f(-width+xPos1, width+yPos1, zPos1+width);
+		glVertex3f(-width+xPos1, width+yPos1, zPos1-width);
+		glVertex3f( width+xPos1, width+yPos1, zPos1+width);
+		glVertex3f( width+xPos1, width+yPos1, zPos1-width);
+		glVertex3f( width+xPos1,-width+yPos1, zPos1+width);
+		glVertex3f( width+xPos1,-width+yPos1, zPos1-width);
 	glEnd();
 
 	glBegin(GL_QUADS);
-		glVertex3f( width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos+width);
-		glVertex3f(-width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos+width);
-		glVertex3f(-width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos+width);
-		glVertex3f( width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos+width);
-		glVertex3f( width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos-width);
-		glVertex3f(-width+mouse_x+xPos1+xPos,-width+mouse_y+yPos1+yPos, zPos1+zPos-width);
-		glVertex3f(-width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos-width);
-		glVertex3f( width+mouse_x+xPos1+xPos, width+mouse_y+yPos1+yPos, zPos1+zPos-width);
+		glVertex3f( width+xPos1,-width+yPos1, zPos1+width);
+		glVertex3f(-width+xPos1,-width+yPos1, zPos1+width);
+		glVertex3f(-width+xPos1, width+yPos1, zPos1+width);
+		glVertex3f( width+xPos1, width+yPos1, zPos1+width);
+		glVertex3f( width+xPos1,-width+yPos1, zPos1-width);
+		glVertex3f(-width+xPos1,-width+yPos1, zPos1-width);
+		glVertex3f(-width+xPos1, width+yPos1, zPos1-width);
+		glVertex3f( width+xPos1, width+yPos1, zPos1-width);
 	glEnd();
 
 }
