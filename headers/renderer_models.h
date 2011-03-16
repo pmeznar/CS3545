@@ -11,6 +11,8 @@ Created on: Feb 19, 2011
 
 #define MAX_MODELS   128
 
+#include "headers/common.h"
+
 void renderer_model_loadASE(char *name, eboolean collidable);
 void renderer_model_drawASE(int index);
 

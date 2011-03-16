@@ -13,6 +13,10 @@ Description:	Texturing demo - you will need to change the path to the texture
 #include "headers/SDL/SDL_opengl.h"
 
 #include "headers/mathlib.h"
+#include "headers/renderer_materials.h"
+#include "headers/renderer_models.h"
+#include "headers/common.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -271,8 +275,6 @@ static void camera_translateStrafe(float dist)
 
 #define HEADER_SIZE 18
 
-typedef unsigned char byte;
-
 typedef struct
 {
 	unsigned char 	idLength, colormapType, imageType;
@@ -450,12 +452,14 @@ static void r_init()
 	//You might want to play with changing the modes
 	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-	r_image_loadTGA("C:\\Users\\Philip\\Documents\\AppState\\S2011\\CS3545\\eclipse\\CS3545\\textures\\ground.tga",
+	r_image_loadTGA("textures\\ground.tga",
 			&myGLTexture[0], &myTexWidth[0], &myTexHeight[0], &myTexBPP[0]);
 	r_image_loadTGA("C:\\Users\\Philip\\Documents\\AppState\\S2011\\CS3545\\eclipse\\CS3545\\textures\\ground.tga",
 				&myGLTexture[1], &myTexWidth[1], &myTexHeight[1], &myTexBPP[1]);
-	r_image_loadTGA("C:\\Users\\Philip\\Documents\\AppState\\S2011\\CS3545\\eclipse\\CS3545\\textures\\back.tga",
+	r_image_loadTGA("textures\\back.tga",
 				&myGLTexture[2], &myTexWidth[2], &myTexHeight[2], &myTexBPP[2]);
+
+	renderer_model_loadASE("\\ASEmodels\\submarine.ASE", efalse);
 
 	camera_init();
 
@@ -528,102 +532,13 @@ static void r_drawFrame()
 	//Orient and position the camera
 	r_setupModelview();
 
-	glColor3f(0.0, 0.0, 1.0);
-	glBegin(GL_QUADS);
-			glTexCoord2f(0.0, 0.0); glVertex3f(-6,-5, -10);
-			glTexCoord2f(1.0, 0.0); glVertex3f( 6,-5, -10);
-			glTexCoord2f(1.0, 1.0); glVertex3f( 6, 5, -10);
-			glTexCoord2f(0.0, 1.0); glVertex3f(-6, 5, -10);
-	glEnd();
+	glColor3f(0.5,0.5,0.5);
+	renderer_model_drawASE(0);
 
-
-	glBindTexture(GL_TEXTURE_2D, myGLTexture[2]);
-	glEnable(GL_TEXTURE_2D);
-		glColor3f(.7,.7,.7);
-		make_rect(0,2,-6,3,2,.2);
-	glDisable(GL_TEXTURE_2D);
-
-		//post
-		glColor3f(0.6,0.6,0.6);
-		make_rect(0,0,-6,.2,4,.2);
-
-		//square on board
-		glBegin(GL_QUADS);
-			glVertex3f(-.6,1,-5.8);
-			glVertex3f(-.55,1,-5.8);
-			glVertex3f(-.6,1.7,-5.8);
-			glVertex3f(-.55,1.7,-5.8);
-
-			glVertex3f(-.55,1.7,-5.8);
-			glVertex3f(-.55,1.65,-5.8);
-			glVertex3f(.55,1.7,-5.8);
-			glVertex3f(.55,1.65,-5.8);
-
-			glVertex3f(.6,1,-5.8);
-			glVertex3f(.55,1,-5.8);
-			glVertex3f(.6,1.7,-5.8);
-			glVertex3f(.55,1.7,-5.8);
-		glEnd();
-
-		//rim
-		glColor3f(1.0,1.0,1.0);
-		glBegin(GL_QUADS);
-			glVertex3f(-.4,1,-5.8);
-			glVertex3f(-.4,1.1,-5.8);
-			glVertex3f(-.4,1.1,-5.3);
-			glVertex3f(-.4,1,-5.3);
-
-			glVertex3f(-.4,1,-5.3);
-			glVertex3f(-.4,1.1,-5.3);
-			glVertex3f(.4,1.1,-5.3);
-			glVertex3f(.4,1,-5.3);
-
-			glVertex3f(.4,1,-5.3);
-			glVertex3f(.4,1.1,-5.3);
-			glVertex3f(.4,1.1,-5.8);
-			glVertex3f(.4,1,-5.8);
-		glEnd();
-
-		//ground/court
-		glBindTexture(GL_TEXTURE_2D, myGLTexture[0]);
-		glEnable(GL_TEXTURE_2D);
-			glColor3f(1,1.0,1);
-			make_rect(0,-2,-4,10,.2,10);
-		glDisable(GL_TEXTURE_2D);
-
-		glColor3f(1.0,1.0,0.0);
-		make_moving_cube(0,0,-2,.3);
+	glColor3f(0,0,1.0);
+	make_rect(0,0,-10,11,10,.2);
 
 	SDL_GL_SwapBuffers();
-}
-
-static void make_cube(int xPos, int yPos, int zPos, float width){
-	width = width/2;
-
-	glBegin(GL_QUAD_STRIP);
-		glVertex3f( width+xPos,-width+yPos, zPos+width);
-		glVertex3f( width+xPos,-width+yPos, zPos-width);
-		glVertex3f(-width+xPos,-width+yPos, zPos+width);
-		glVertex3f(-width+xPos,-width+yPos, zPos-width);
-		glTexCoord2f(0.0, 1.0);	glVertex3f(-width+xPos, width+yPos, zPos+width);
-		glTexCoord2f(0.0, 0.0);	glVertex3f(-width+xPos, width+yPos, zPos-width);
-		glTexCoord2f(1.0, 1.0);	glVertex3f( width+xPos, width+yPos, zPos+width);
-		glTexCoord2f(1.0, 0.0);	glVertex3f( width+xPos, width+yPos, zPos-width);
-		glVertex3f( width+xPos,-width+yPos, zPos+width);
-		glVertex3f( width+xPos,-width+yPos, zPos-width);
-	glEnd();
-
-	glBegin(GL_QUADS);
-		glVertex3f( width+xPos,-width+yPos, zPos+width);
-		glVertex3f(-width+xPos,-width+yPos, zPos+width);
-		glVertex3f(-width+xPos, width+yPos, zPos+width);
-		glVertex3f( width+xPos, width+yPos, zPos+width);
-		glVertex3f( width+xPos,-width+yPos, zPos-width);
-		glVertex3f(-width+xPos,-width+yPos, zPos-width);
-		glVertex3f(-width+xPos, width+yPos, zPos-width);
-		glVertex3f( width+xPos, width+yPos, zPos-width);
-	glEnd();
-
 }
 
 static void make_rect(int xPos, int yPos, int zPos, float xWidth, float yWidth, float zWidth){
@@ -632,56 +547,26 @@ static void make_rect(int xPos, int yPos, int zPos, float xWidth, float yWidth, 
 	zWidth = zWidth/2;
 
 	glBegin(GL_QUAD_STRIP);
-		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos-zWidth);
 		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos+zWidth);
-		glTexCoord2f(0.0, 1.0);glVertex3f(-xWidth+xPos, yWidth+yPos, zPos-zWidth);
-		glTexCoord2f(0.0, 0.0);glVertex3f(-xWidth+xPos, yWidth+yPos, zPos+zWidth);
-		glTexCoord2f(1.0, 1.0);glVertex3f( xWidth+xPos, yWidth+yPos, zPos-zWidth);
-		glTexCoord2f(1.0, 0.0);glVertex3f( xWidth+xPos, yWidth+yPos, zPos+zWidth);
-		glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos-zWidth);
+		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos-zWidth);
 		glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos+zWidth);
-		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos-zWidth);
-		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos+zWidth);
-	glEnd();
-
-	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0);	glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos+zWidth);
-		glTexCoord2f(1.0, 0.0); glVertex3f( xWidth+xPos,-yWidth+yPos, zPos+zWidth);
-		glTexCoord2f(1.0, 1.0);	glVertex3f( xWidth+xPos, yWidth+yPos, zPos+zWidth);
-		glTexCoord2f(0.0, 1.0);	glVertex3f(-xWidth+xPos, yWidth+yPos, zPos+zWidth);
-
-		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos-zWidth);
-		glVertex3f( xWidth+xPos, yWidth+yPos, zPos-zWidth);
-		glVertex3f(-xWidth+xPos, yWidth+yPos, zPos-zWidth);
 		glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos-zWidth);
-	glEnd();
-}
-
-static void make_moving_cube(int xPos1, int yPos1, int zPos1, float width){
-	width = width/2;
-
-	glBegin(GL_QUAD_STRIP);
-		glVertex3f( width+xPos1,-width+yPos1, zPos1+width);
-		glVertex3f( width+xPos1,-width+yPos1, zPos1-width);
-		glVertex3f(-width+xPos1,-width+yPos1, zPos1+width);
-		glVertex3f(-width+xPos1,-width+yPos1, zPos1-width);
-		glVertex3f(-width+xPos1, width+yPos1, zPos1+width);
-		glVertex3f(-width+xPos1, width+yPos1, zPos1-width);
-		glVertex3f( width+xPos1, width+yPos1, zPos1+width);
-		glVertex3f( width+xPos1, width+yPos1, zPos1-width);
-		glVertex3f( width+xPos1,-width+yPos1, zPos1+width);
-		glVertex3f( width+xPos1,-width+yPos1, zPos1-width);
+		glVertex3f(-xWidth+xPos, yWidth+yPos, zPos+zWidth);
+		glVertex3f(-xWidth+xPos, yWidth+yPos, zPos-zWidth);
+		glVertex3f( xWidth+xPos, yWidth+yPos, zPos+zWidth);
+		glVertex3f( xWidth+xPos, yWidth+yPos, zPos-zWidth);
+		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos+zWidth);
+		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos-zWidth);
 	glEnd();
 
 	glBegin(GL_QUADS);
-		glVertex3f( width+xPos1,-width+yPos1, zPos1+width);
-		glVertex3f(-width+xPos1,-width+yPos1, zPos1+width);
-		glVertex3f(-width+xPos1, width+yPos1, zPos1+width);
-		glVertex3f( width+xPos1, width+yPos1, zPos1+width);
-		glVertex3f( width+xPos1,-width+yPos1, zPos1-width);
-		glVertex3f(-width+xPos1,-width+yPos1, zPos1-width);
-		glVertex3f(-width+xPos1, width+yPos1, zPos1-width);
-		glVertex3f( width+xPos1, width+yPos1, zPos1-width);
+		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos+zWidth);
+		glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos+zWidth);
+		glVertex3f(-xWidth+xPos, yWidth+yPos, zPos+zWidth);
+		glVertex3f( xWidth+xPos, yWidth+yPos, zPos+zWidth);
+		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos-zWidth);
+		glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos-zWidth);
+		glVertex3f(-xWidth+xPos, yWidth+yPos, zPos-zWidth);
+		glVertex3f( xWidth+xPos, yWidth+yPos, zPos-zWidth);
 	glEnd();
-
 }
