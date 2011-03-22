@@ -28,9 +28,7 @@ Description:	Texturing demo - you will need to change the path to the texture
 static int user_exit = 0;
 
 int myGLTexture[3], myTexWidth[3], myTexHeight[3], myTexBPP[3];
-static void make_cube(int xPos, int yPos, int zPos, float width);
-static void make_moving_cube(int xPos, int yPos, int zPos, float width);
-static void make_rect(int xPos, int yPos, int zPos, float xWidth, float yWidth, float zWidth);
+
 
 //INPUT DECLARATIONS
 
@@ -163,13 +161,13 @@ static void input_update()
 	//WASD
 	//The input values are arbitrary
 	if(keys_down[SDLK_w])
-		camera_translateForward(0.5);
+		camera_translateForward(0.05);
 	if(keys_down[SDLK_s])
-		camera_translateForward(-0.5);
+		camera_translateForward(-0.05);
 	if(keys_down[SDLK_a])
-		camera_translateStrafe(0.5);
+		camera_translateStrafe(0.05);
 	if(keys_down[SDLK_d])
-		camera_translateStrafe(-0.5);
+		camera_translateStrafe(-0.05);
 
 	//Reset, sometimes you can get pretty lost...
 	if(keys_down[SDLK_r])
@@ -187,6 +185,7 @@ static void input_update()
 
 //Maintain a matrix for each rotation and one for translation
 static float xRotMatrix[16], yRotMatrix[16], zRotMatrix[16], translateMatrix[16];
+static const GLfloat flipMatrix[16] = {1,0,0,0,0,0,1,0,0,-1,0,0,0,0,0,1};
 
 static void camera_init()
 {
@@ -207,12 +206,6 @@ static void camera_rotateY(float degree)
 {
 	camera.angles_deg[_Y] += degree;
 	camera.angles_rad[_Y] = camera.angles_deg[_Y] * M_PI_DIV180;
-}
-
-static void camera_rotateZ(float degree)
-{
-	camera.angles_deg[_Z] += degree;
-	camera.angles_rad[_Z] = camera.angles_deg[_Z] * M_PI_DIV180;
 }
 
 static void camera_translateForward(float dist)
@@ -460,6 +453,9 @@ static void r_init()
 				&myGLTexture[2], &myTexWidth[2], &myTexHeight[2], &myTexBPP[2]);
 
 	renderer_model_loadASE("ASEmodels\\submarine.ASE", efalse);
+	renderer_model_loadASE("ASEmodels\\myskybox.ASE", efalse);
+	renderer_model_loadASE("ASEmodels\\arch.ASE", efalse);
+	renderer_model_loadASE("ASEmodels\\weapon1.ASE", efalse);
 
 	camera_init();
 	camera.position[_Z] += 200;
@@ -486,6 +482,7 @@ static void r_setupProjection()
 static void r_setupModelview()
 {
 	float sinX, cosX, sinY, cosY, sinZ, cosZ;
+	float addRot[16] = {-1,0,0,0,0,1,0,0,0,0,-1,0,0,0,0,1};
 
 	sinX = sin(-camera.angles_rad[_X]);
 	cosX = cos(-camera.angles_rad[_X]);
@@ -521,6 +518,56 @@ static void r_setupModelview()
 	glMultMatrixf(yRotMatrix);
 	glMultMatrixf(zRotMatrix);
 	glMultMatrixf(translateMatrix);
+	glMultMatrixf(flipMatrix);
+	glMultMatrixf(addRot);
+}
+
+/*
+ * r_setupModelview
+ * Calculates the GL modelview matrix. Called each frame.
+ */
+static void camera_setupModelviewForSky(){
+	float sinX, cosX, sinY, cosY, sinZ, cosZ;
+
+	sinX = sin(-camera.angles_rad[_X]);
+	cosX = cos(-camera.angles_rad[_X]);
+
+	xRotMatrix[5]  = cosX;
+	xRotMatrix[6]  = sinX;
+	xRotMatrix[9]  = -sinX;
+	xRotMatrix[10] = cosX;
+
+	sinY = sin(-camera.angles_rad[_Y]);
+	cosY = cos(-camera.angles_rad[_Y]);
+
+	yRotMatrix[0]  =  cosY;
+	yRotMatrix[2]  = -sinY;
+	yRotMatrix[8]  =  sinY;
+	yRotMatrix[10] =  cosY;
+
+	sinZ = sin(-camera.angles_rad[_Z]);
+	cosZ = cos(-camera.angles_rad[_Z]);
+
+	zRotMatrix[0] = cosZ;
+	zRotMatrix[1] = sinZ;
+	zRotMatrix[4] = -sinZ;
+	zRotMatrix[5] = cosZ;
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glMultMatrixf(xRotMatrix);
+	glMultMatrixf(yRotMatrix);
+	glMultMatrixf(zRotMatrix);
+	glMultMatrixf(flipMatrix);
+}
+
+static void camera_setupWeapon(){
+	float addRot[16] = {-1,0,0,0,0,1,0,0,0,0,-1,0,0,0,0,1};
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	glMultMatrixf(flipMatrix);
+	glMultMatrixf(addRot);
 }
 
 /*
@@ -534,45 +581,28 @@ static void r_drawFrame()
 	//Orient and position the camera
 	r_setupModelview();
 
-	glEnable(GL_TEXTURE_2D);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	glColor3f(0.5,0.5,0.5);
-	glBindTexture(GL_TEXTURE_2D, myGLTexture[0]);
-	renderer_model_drawASE(0);
+	glPushMatrix();
+		glLoadIdentity();
+		camera_setupModelviewForSky();
+		renderer_model_drawASE(1);
+	glPopMatrix();
 
-	glEnable(GL_TEXTURE_2D);
-	glColor3f(0,0,1.0);
-	make_rect(0,0,-10,11,10,.2);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	renderer_model_drawASE(2);
+
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	glPushMatrix();
+		glLoadIdentity();
+		camera_setupWeapon();
+		renderer_model_drawASE(3);
+	glPopMatrix();
 
 	SDL_GL_SwapBuffers();
 }
 
-static void make_rect(int xPos, int yPos, int zPos, float xWidth, float yWidth, float zWidth){
-	xWidth = xWidth/2;
-	yWidth = yWidth/2;
-	zWidth = zWidth/2;
 
-	glBegin(GL_QUAD_STRIP);
-		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos+zWidth);
-		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos-zWidth);
-		glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos+zWidth);
-		glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos-zWidth);
-		glVertex3f(-xWidth+xPos, yWidth+yPos, zPos+zWidth);
-		glVertex3f(-xWidth+xPos, yWidth+yPos, zPos-zWidth);
-		glVertex3f( xWidth+xPos, yWidth+yPos, zPos+zWidth);
-		glVertex3f( xWidth+xPos, yWidth+yPos, zPos-zWidth);
-		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos+zWidth);
-		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos-zWidth);
-	glEnd();
-
-	glBegin(GL_QUADS);
-		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos+zWidth);
-		glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos+zWidth);
-		glVertex3f(-xWidth+xPos, yWidth+yPos, zPos+zWidth);
-		glVertex3f( xWidth+xPos, yWidth+yPos, zPos+zWidth);
-		glVertex3f( xWidth+xPos,-yWidth+yPos, zPos-zWidth);
-		glVertex3f(-xWidth+xPos,-yWidth+yPos, zPos-zWidth);
-		glVertex3f(-xWidth+xPos, yWidth+yPos, zPos-zWidth);
-		glVertex3f( xWidth+xPos, yWidth+yPos, zPos-zWidth);
-	glEnd();
-}

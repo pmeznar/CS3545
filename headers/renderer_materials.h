@@ -21,10 +21,6 @@ int renderer_img_getMatBpp(int i);
 
 void renderer_img_loadTGA(char *name, int *glTexID, int *width, int *height, int *bpp);
 
-#endif /* RENDERER_MATERIALS_H_ *//*
- * renderer_materials.h
- *
- *  Created on: Mar 16, 2011
- *      Author: Philip
- */
+#endif /* RENDERER_MATERIALS_H_ */
+
 

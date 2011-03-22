@@ -20,6 +20,12 @@ Notes:		Please remember that this is, for the moment, basically
 
 static void loadASE_parseTokens(char **tokens, int numTokens, eboolean collidable);
 static void loadASE_generateList(int index);
+static const GLfloat flipMatrix[16] =
+{1.0, 0.0,  0.0, 0.0,
+ 0.0, 0.0, -1.0, 0.0,
+ 0.0, 1.0,  0.0, 0.0,
+ 0.0, 0.0,  0.0, 1.0};
+
 
 /*
 ===========================================================================
