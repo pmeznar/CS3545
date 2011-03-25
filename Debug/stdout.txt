@@ -1,1 +1,0 @@
-Loading TGA: C:\Users\Philip\Documents\AppState\S2011\CS3545\eclipse\CS3545\textures\ground.tga, failed. Null file pointer.

@@ -153,6 +153,7 @@ void input_mouseMove(int dx, int dy)
 	SDL_WarpMouse(halfWinWidth, halfWinHeight);
 }
 
+float walkCount = 0;
 /*
  * input_update
  */
@@ -160,14 +161,24 @@ static void input_update()
 {
 	//WASD
 	//The input values are arbitrary
-	if(keys_down[SDLK_w])
-		camera_translateForward(0.05);
-	if(keys_down[SDLK_s])
-		camera_translateForward(-0.05);
-	if(keys_down[SDLK_a])
-		camera_translateStrafe(0.05);
-	if(keys_down[SDLK_d])
-		camera_translateStrafe(-0.05);
+	if(keys_down[SDLK_w]){
+		camera_translateForward(0.5);
+		walkCount += .01;
+	}
+	if(keys_down[SDLK_s]){
+		camera_translateForward(-0.5);
+		walkCount += .01;
+	}
+	if(keys_down[SDLK_a]){
+		camera_translateStrafe(0.5);
+		walkCount += .01;
+	}
+	if(keys_down[SDLK_d]){
+		camera_translateStrafe(-0.5);
+		walkCount += .01;
+	}
+
+
 
 	//Reset, sometimes you can get pretty lost...
 	if(keys_down[SDLK_r])
@@ -198,8 +209,10 @@ static void camera_init()
 //Rotations just increase/decrease the angle and compute a new radian value.
 static void camera_rotateX(float degree)
 {
-	camera.angles_deg[_X] += degree;
-	camera.angles_rad[_X] = camera.angles_deg[_X] * M_PI_DIV180;
+	if(abs(camera.angles_deg[_X] + degree) < 90){
+		camera.angles_deg[_X] += degree;
+		camera.angles_rad[_X] = camera.angles_deg[_X] * M_PI_DIV180;
+	}
 }
 
 static void camera_rotateY(float degree)
@@ -563,9 +576,12 @@ static void camera_setupModelviewForSky(){
 
 static void camera_setupWeapon(){
 	float addRot[16] = {-1,0,0,0,0,1,0,0,0,0,-1,0,0,0,0,1};
+	float bobWalk[16] = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
+
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+	glMultMatrixf(bobWalk);
 	glMultMatrixf(flipMatrix);
 	glMultMatrixf(addRot);
 }
