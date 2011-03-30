@@ -27,7 +27,7 @@ Description:	Texturing demo - you will need to change the path to the texture
 
 static int user_exit = 0;
 
-int myGLTexture[3], myTexWidth[3], myTexHeight[3], myTexBPP[3], timeStep;
+int myGLTexture[3], myTexWidth[3], myTexHeight[3], myTexBPP[3], timeStep, timer;
 
 
 //INPUT DECLARATIONS
@@ -95,7 +95,7 @@ int SDL_main(int argc, char* argv[])
 
 	while(!user_exit)
 	{
-		timeStep = SDL_GetTicks() - timeStep;
+		timeStep = SDL_GetTicks() - timer;
 		//Handle input
 		while(SDL_PollEvent(&event))
 		{
@@ -114,7 +114,7 @@ int SDL_main(int argc, char* argv[])
 				user_exit = 1;
 			}
 		}
-
+		timer = SDL_GetTicks();
 		input_update(timeStep);
 		r_drawFrame();
 	}
@@ -160,9 +160,10 @@ void input_mouseMove(int dx, int dy)
 static void input_update(int timeStep)
 {
 	double translateLength;
-	double movePerMillisecond = .00002;
+	double movePerMillisecond = .1;
 
 	translateLength = timeStep * movePerMillisecond;
+	printf("Time: %d\n", timeStep);
 
 	//WASD
 	//The input values are arbitrary
@@ -451,6 +452,8 @@ static void r_image_loadTGA(char *name, int *glTexID, int *width, int *height, i
  */
 static void r_init()
 {
+	timer = SDL_GetTicks();
+
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 
@@ -476,7 +479,6 @@ static void r_init()
 
 
 	r_setupProjection();
-	timeStep = SDL_GetTicks();
 }
 
 /*
