@@ -27,7 +27,7 @@ Description:	Texturing demo - you will need to change the path to the texture
 
 static int user_exit = 0;
 
-int myGLTexture[3], myTexWidth[3], myTexHeight[3], myTexBPP[3];
+int myGLTexture[3], myTexWidth[3], myTexHeight[3], myTexBPP[3], timeStep;
 
 
 //INPUT DECLARATIONS
@@ -35,7 +35,7 @@ int myGLTexture[3], myTexWidth[3], myTexHeight[3], myTexBPP[3];
 static void input_keyDown(SDLKey k);
 static void input_keyUp(SDLKey k);
 static void input_mouseMove(int dx, int dy);
-static void input_update();
+static void input_update(int timeStep);
 
 //CAMERA DECLARATIONS
 
@@ -51,7 +51,7 @@ static camera_t camera;
 static void camera_init();
 static void camera_rotateX(float degree);
 static void camera_rotateY(float degree);
-static void camera_rotateZ(float degree);
+//static void camera_rotateZ(float degree);
 static void camera_translateForward(float dist);
 static void camera_translateStrafe(float dist);
 
@@ -95,6 +95,7 @@ int SDL_main(int argc, char* argv[])
 
 	while(!user_exit)
 	{
+		timeStep = SDL_GetTicks() - timeStep;
 		//Handle input
 		while(SDL_PollEvent(&event))
 		{
@@ -114,7 +115,7 @@ int SDL_main(int argc, char* argv[])
 			}
 		}
 
-		input_update();
+		input_update(timeStep);
 		r_drawFrame();
 	}
 
@@ -153,29 +154,29 @@ void input_mouseMove(int dx, int dy)
 	SDL_WarpMouse(halfWinWidth, halfWinHeight);
 }
 
-float walkCount = 0;
 /*
  * input_update
  */
-static void input_update()
+static void input_update(int timeStep)
 {
+	double translateLength;
+	double movePerMillisecond = .00002;
+
+	translateLength = timeStep * movePerMillisecond;
+
 	//WASD
 	//The input values are arbitrary
 	if(keys_down[SDLK_w]){
-		camera_translateForward(0.5);
-		walkCount += .01;
+		camera_translateForward(translateLength);
 	}
 	if(keys_down[SDLK_s]){
-		camera_translateForward(-0.5);
-		walkCount += .01;
+		camera_translateForward(-translateLength);
 	}
 	if(keys_down[SDLK_a]){
-		camera_translateStrafe(0.5);
-		walkCount += .01;
+		camera_translateStrafe(translateLength);
 	}
 	if(keys_down[SDLK_d]){
-		camera_translateStrafe(-0.5);
-		walkCount += .01;
+		camera_translateStrafe(-translateLength);
 	}
 
 
@@ -475,6 +476,7 @@ static void r_init()
 
 
 	r_setupProjection();
+	timeStep = SDL_GetTicks();
 }
 
 /*
@@ -576,12 +578,10 @@ static void camera_setupModelviewForSky(){
 
 static void camera_setupWeapon(){
 	float addRot[16] = {-1,0,0,0,0,1,0,0,0,0,-1,0,0,0,0,1};
-	float bobWalk[16] = {1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	glMultMatrixf(bobWalk);
 	glMultMatrixf(flipMatrix);
 	glMultMatrixf(addRot);
 }
