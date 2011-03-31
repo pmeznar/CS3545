@@ -28,6 +28,8 @@ Description:	Texturing demo - you will need to change the path to the texture
 static int user_exit = 0;
 
 int myGLTexture[3], myTexWidth[3], myTexHeight[3], myTexBPP[3], timeStep, timer;
+int weaponCharge = 0;
+double walkCount = 0, tilt = 0;
 
 
 //INPUT DECLARATIONS
@@ -162,7 +164,8 @@ static void input_update(int timeStep)
 	double translateLength;
 	double movePerMillisecond = .1;
 
-	translateLength = timeStep * movePerMillisecond;
+	translateLength = timeStep * movePerMillisecond + (weaponCharge * 1.2);
+	double bobStep = timeStep*movePerMillisecond/13;
 	printf("Time: %d\n", timeStep);
 
 	//WASD
@@ -178,6 +181,13 @@ static void input_update(int timeStep)
 	}
 	if(keys_down[SDLK_d]){
 		camera_translateStrafe(-translateLength);
+	}
+	if(keys_down[SDLK_e]){
+		weaponCharge = 1;
+	} else {weaponCharge = 0;}
+
+	if(keys_down[SDLK_w] || keys_down[SDLK_s] || keys_down[SDLK_a] || keys_down[SDLK_d]){
+		walkCount += bobStep;
 	}
 
 
@@ -234,14 +244,14 @@ static void camera_translateForward(float dist)
 	cosX = cos(camera.angles_rad[_X]);
 
 	//Free
-	dx =  -sinY * cosX * dist;
-	dy =  sinX * dist;
-	dz =  -cosY * cosX * dist;
+	//dx =  -sinY * cosX * dist;
+	//dy =  sinX * dist;
+	//dz =  -cosY * cosX * dist;
 
 	//Person
-	//dx =  -sinY * dist;
-	//dy =  0.0;
-	//dz =  -cosY * dist;
+	dx =  -sinY * dist;
+	dy =  0.0;
+	dz =  -cosY * dist;
 
 	camera.position[_X] += dx;
 	camera.position[_Y] += dy;
@@ -476,7 +486,7 @@ static void r_init()
 
 	camera_init();
 	camera.position[_Z] += 200;
-
+	camera.position[_Y] += 15;
 
 	r_setupProjection();
 }
@@ -580,12 +590,38 @@ static void camera_setupModelviewForSky(){
 
 static void camera_setupWeapon(){
 	float addRot[16] = {-1,0,0,0,0,1,0,0,0,0,-1,0,0,0,0,1};
+	float bob[16];
+	float chargeRot[16];
+
+	glmatrix_identity(bob);
+	glmatrix_identity(chargeRot);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+	if(!weaponCharge){
+		bob[13] = 3/5.0 * sin(walkCount);
+		if(tilt > 0) tilt -= .04;
+	}
+	//soooo ugly.  But effective.
+	if (weaponCharge){
+		if (tilt < 1) tilt += .04;
+	}
+
+	chargeRot[5] = cos(tilt);
+	chargeRot[6] = -sin(tilt);
+	chargeRot[9] = sin(tilt);
+	chargeRot[10] = cos(tilt);
+	bob[14] = -7*tilt;
+	//otherwise overrides bobbing motion
+	if (tilt != 0) bob[13] = 2*tilt;
+
+	glMultMatrixf(bob);
+	glMultMatrixf(chargeRot);
 	glMultMatrixf(flipMatrix);
 	glMultMatrixf(addRot);
+
+
 }
 
 /*
