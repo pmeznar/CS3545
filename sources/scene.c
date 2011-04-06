@@ -16,6 +16,7 @@ Description:	Texturing demo - you will need to change the path to the texture
 #include "headers/renderer_materials.h"
 #include "headers/renderer_models.h"
 #include "headers/common.h"
+#include "headers/character.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +31,8 @@ static int user_exit = 0;
 int myGLTexture[3], myTexWidth[3], myTexHeight[3], myTexBPP[3], timeStep, timer;
 int weaponCharge = 0;
 double walkCount = 0, tilt = 0;
+weapon currentWeapon[3];
+character Player;
 
 
 //INPUT DECLARATIONS
@@ -149,8 +152,13 @@ void input_mouseMove(int dx, int dy)
 	dx -= halfWinWidth; dy -= halfWinHeight;
 
 	//Feed the deltas to the camera
-	camera_rotateX(-dy/2.0);
-	camera_rotateY(-dx/2.0);
+	if(weaponCharge){
+		camera_rotateX(-dy/2.0*Player.weapon.turnSpeed);
+		camera_rotateY(-dx/2.0*Player.weapon.turnSpeed);
+	} else {
+		camera_rotateX(-dy/2.0);
+		camera_rotateY(-dx/2.0);
+	}
 
 	//Reset cursor to center
 	SDL_WarpMouse(halfWinWidth, halfWinHeight);
@@ -164,7 +172,7 @@ static void input_update(int timeStep)
 	double translateLength;
 	double movePerMillisecond = .1;
 
-	translateLength = timeStep * movePerMillisecond + (weaponCharge * 1.2);
+	translateLength = timeStep * movePerMillisecond + (weaponCharge * Player.weapon.chargeSpeed);
 	double bobStep = timeStep*movePerMillisecond/13;
 	printf("Time: %d\n", timeStep);
 
@@ -182,6 +190,17 @@ static void input_update(int timeStep)
 	if(keys_down[SDLK_d]){
 		camera_translateStrafe(-translateLength);
 	}
+
+	if(keys_down[SDLK_1]){
+			Player.weapon = currentWeapon[0];
+		}
+	if(keys_down[SDLK_2]){
+			Player.weapon = currentWeapon[1];
+		}
+	if(keys_down[SDLK_3]){
+			Player.weapon = currentWeapon[2];
+		}
+
 	if(keys_down[SDLK_e]){
 		weaponCharge = 1;
 	} else {weaponCharge = 0;}
@@ -482,7 +501,22 @@ static void r_init()
 	renderer_model_loadASE("ASEmodels\\myskybox.ASE", efalse);
 	renderer_model_loadASE("ASEmodels\\arch.ASE", efalse);
 	renderer_model_loadASE("ASEmodels\\weapon1.ASE", efalse);
+	renderer_model_loadASE("ASEmodels\\spear.ASE", efalse);
 	renderer_model_loadASE("ASEmodels\\lance.ASE", efalse);
+
+	currentWeapon[0].weaponNumber = 2;
+	currentWeapon[0].chargeSpeed = 1.2;
+	currentWeapon[0].turnSpeed = 1;
+
+	currentWeapon[1].weaponNumber = 3;
+	currentWeapon[1].chargeSpeed = 1.5;
+	currentWeapon[1].turnSpeed = .5;
+
+	currentWeapon[2].weaponNumber = 4;
+	currentWeapon[2].chargeSpeed = 3;
+	currentWeapon[2].turnSpeed = 0.2;
+
+	Player.weapon = currentWeapon[2];
 
 	camera_init();
 	camera.position[_Z] += 200;
@@ -661,7 +695,7 @@ static void r_drawFrame()
 	glPushMatrix();
 		glLoadIdentity();
 		camera_setupWeapon();
-		renderer_model_drawASE(3);
+		renderer_model_drawASE(Player.weapon.weaponNumber);
 	glPopMatrix();
 
 	SDL_GL_SwapBuffers();
