@@ -479,10 +479,10 @@ static void r_init()
 	r_image_loadTGA("textures\\back.tga",
 				&myGLTexture[2], &myTexWidth[2], &myTexHeight[2], &myTexBPP[2]);
 
-	renderer_model_loadASE("ASEmodels\\submarine.ASE", efalse);
 	renderer_model_loadASE("ASEmodels\\myskybox.ASE", efalse);
 	renderer_model_loadASE("ASEmodels\\arch.ASE", efalse);
 	renderer_model_loadASE("ASEmodels\\weapon1.ASE", efalse);
+	renderer_model_loadASE("ASEmodels\\lance.ASE", efalse);
 
 	camera_init();
 	camera.position[_Z] += 200;
@@ -590,6 +590,7 @@ static void camera_setupModelviewForSky(){
 
 static void camera_setupWeapon(){
 	float addRot[16] = {-1,0,0,0,0,1,0,0,0,0,-1,0,0,0,0,1};
+	float weaponSpot[16] = {1,0,0,0,0,1,0,0,0,0,1,0,12,-10,-12,1};
 	float bob[16];
 	float chargeRot[16];
 
@@ -599,9 +600,13 @@ static void camera_setupWeapon(){
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+	/**
+	 * Handles weapon charging
+	 * --------------------------------------
+	 */
 	if(!weaponCharge){
-		bob[13] = 3/5.0 * sin(walkCount);
-		if(tilt > 0) tilt -= .04;
+		bob[13] = 3/7.0 * sin(walkCount);
+		if(tilt > 0) tilt -= .02;
 	}
 	//soooo ugly.  But effective.
 	if (weaponCharge){
@@ -612,10 +617,13 @@ static void camera_setupWeapon(){
 	chargeRot[6] = -sin(tilt);
 	chargeRot[9] = sin(tilt);
 	chargeRot[10] = cos(tilt);
-	bob[14] = -7*tilt;
-	//otherwise overrides bobbing motion
-	if (tilt != 0) bob[13] = 2*tilt;
+	bob[14] = 2*tilt;
 
+	//otherwise overrides bobbing motion
+	if (weaponCharge) bob[13] = 2*tilt;
+	//-------------------------------------
+
+	glMultMatrixf(weaponSpot);
 	glMultMatrixf(bob);
 	glMultMatrixf(chargeRot);
 	glMultMatrixf(flipMatrix);
@@ -641,12 +649,12 @@ static void r_drawFrame()
 	glPushMatrix();
 		glLoadIdentity();
 		camera_setupModelviewForSky();
-		renderer_model_drawASE(1);
+		renderer_model_drawASE(0);
 	glPopMatrix();
 
 	glClear(GL_DEPTH_BUFFER_BIT);
 
-	renderer_model_drawASE(2);
+	renderer_model_drawASE(1);
 
 	glClear(GL_DEPTH_BUFFER_BIT);
 
