@@ -31,6 +31,7 @@ static int user_exit = 0;
 
 int myGLTexture[3], myTexWidth[3], myTexHeight[3], myTexBPP[3], timeStep, timer;
 int weaponCharge = 0;
+int hulkMode = 0;
 double walkCount = 0, tilt = 0;
 weapon currentWeapon[3];
 character Player;
@@ -46,8 +47,9 @@ static void input_update(int timeStep);
 //CAMERA DECLARATIONS
 
 static camera_t camera;
-static vec3_t lastPos;
-static eboolean colliding;
+static camera_t futureCam;
+static collisionTri_t failTriangle;
+
 
 static void camera_init();
 static void camera_rotateX(float degree);
@@ -171,39 +173,38 @@ static void input_update(int timeStep)
 	translateLength = timeStep * movePerMillisecond + (weaponCharge * Player.weapon.chargeSpeed * movePerMillisecond * timeStep);
 	double bobStep = timeStep*movePerMillisecond/13;
 
-	if(simpleTest(camera)){
-		colliding = etrue;
-		collideAction(camera, translateLength);
+	//WASD
+	//The input values are arbitrary
+	if(keys_down[SDLK_w]){
+		camera_translateForward(translateLength);
+	}
+	if(keys_down[SDLK_s]){
+		camera_translateForward(-translateLength);
+	}
+	if(keys_down[SDLK_a]){
+		camera_translateStrafe(translateLength);
+	}
+	if(keys_down[SDLK_d]){
+		camera_translateStrafe(-translateLength);
+	}
+	if(keys_down[SDLK_x]){
+		hulkMode = 1;
+	} else {
+		hulkMode = 0;
 	}
 
-	else{
-		//WASD
-		//The input values are arbitrary
-		if(keys_down[SDLK_w]){
-			camera_translateForward(translateLength);
+	if(keys_down[SDLK_1]){
+			Player.weapon = currentWeapon[0];
 		}
-		if(keys_down[SDLK_s]){
-			camera_translateForward(-translateLength);
+	if(keys_down[SDLK_2]){
+			Player.weapon = currentWeapon[1];
 		}
-		if(keys_down[SDLK_a]){
-			camera_translateStrafe(translateLength);
-		}
-		if(keys_down[SDLK_d]){
-			camera_translateStrafe(-translateLength);
+	if(keys_down[SDLK_3]){
+			Player.weapon = currentWeapon[2];
 		}
 
-		if(keys_down[SDLK_1]){
-				Player.weapon = currentWeapon[0];
-			}
-		if(keys_down[SDLK_2]){
-				Player.weapon = currentWeapon[1];
-			}
-		if(keys_down[SDLK_3]){
-				Player.weapon = currentWeapon[2];
-			}
 
-		colliding = efalse;
-	}
+
 
 	if(keys_down[SDLK_e]){
 		weaponCharge = 1;
@@ -241,15 +242,6 @@ static void camera_init()
 	glmatrix_identity(translateMatrix);
 }
 
-static void collideAction(camera_t camera, double length){
-	if(keys_down[SDLK_w]){
-		camera_translateForward(-length);
-	}
-	if(keys_down[SDLK_s]){
-		camera_translateForward(length);
-	}
-}
-
 //Rotations just increase/decrease the angle and compute a new radian value.
 static void camera_rotateX(float degree)
 {
@@ -285,15 +277,24 @@ static void camera_translateForward(float dist)
 	dy =  0.0;
 	dz =  -cosY * dist;
 
-	if(colliding == efalse){
-		lastPos[_X] = camera.position[_X];
-		lastPos[_Y] = camera.position[_Y];
-		lastPos[_Z] = camera.position[_Z];
-	}
+	futureCam = camera;
 
-	camera.position[_X] += dx;
-	camera.position[_Y] += dy;
-	camera.position[_Z] += dz;
+	futureCam.position[_X] += dx;
+	futureCam.position[_Y] += dy;
+	futureCam.position[_Z] += dz;
+
+	if(!simpleTest(futureCam, &failTriangle) || hulkMode){
+		camera.position[_X] += dx;
+		camera.position[_Y] += dy;
+		camera.position[_Z] += dz;
+	} else {
+		if(failTriangle.verts[0][0] < camera.position[_X] && failTriangle.verts[1][0] > camera.position[_X])
+			camera.position[_X] += dx;
+		if(failTriangle.verts[0][2] < camera.position[_Y] && failTriangle.verts[1][2] > camera.position[_Y])
+			camera.position[_Y] += dy;
+		if(failTriangle.verts[0][1] < camera.position[_X] && failTriangle.verts[1][1] > camera.position[_Z])
+			camera.position[_Z] += dz;
+	}
 }
 
 static void camera_translateStrafe(float dist)
@@ -318,15 +319,24 @@ static void camera_translateStrafe(float dist)
 	//dy =  0.0;
 	//dz =  -cosY * dist;
 
-	if(colliding == efalse){
-		lastPos[_X] = camera.position[_X];
-		lastPos[_Y] = camera.position[_Y];
-		lastPos[_Z] = camera.position[_Z];
-	}
+	futureCam = camera;
 
-	camera.position[_X] += dx;
-	camera.position[_Y] += dy;
-	camera.position[_Z] += dz;
+	futureCam.position[_X] += dx;
+	futureCam.position[_Y] += dy;
+	futureCam.position[_Z] += dz;
+
+	if(!simpleTest(futureCam, &failTriangle) || hulkMode){
+		camera.position[_X] += dx;
+		camera.position[_Y] += dy;
+		camera.position[_Z] += dz;
+	} else {
+		if(failTriangle.verts[0][0] < camera.position[_X] && failTriangle.verts[1][0] > camera.position[_X])
+			camera.position[_X] += dx;
+		if(failTriangle.verts[0][2] < camera.position[_Y] && failTriangle.verts[1][2] > camera.position[_Y])
+			camera.position[_Y] += dy;
+		if(failTriangle.verts[0][1] < camera.position[_X] && failTriangle.verts[1][1] > camera.position[_Z])
+			camera.position[_Z] += dz;
+	}
 }
 
 /*
