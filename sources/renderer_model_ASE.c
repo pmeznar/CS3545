@@ -436,7 +436,7 @@ static void loadASE_parseTokens(char **tokens, int numTokens, eboolean collidabl
 	for(i = 0; i < model->numObjects; i++)
 		model->objects[i].materialRef = model->materials.list[model->objects[i].materialRef].globalID;
 
-	/*
+
 	//Potentially add triangles to collision list
 	if(collidable)
 	{
@@ -457,7 +457,7 @@ static void loadASE_parseTokens(char **tokens, int numTokens, eboolean collidabl
 			}
 		}
 	}
-	*/
+
 
 	//Generate a display list for drawing
 	model->glListID = glGenLists(1);

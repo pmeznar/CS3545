@@ -17,6 +17,7 @@ Description:	Texturing demo - you will need to change the path to the texture
 #include "headers/renderer_models.h"
 #include "headers/common.h"
 #include "headers/character.h"
+#include "headers/world_public.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,14 +45,9 @@ static void input_update(int timeStep);
 
 //CAMERA DECLARATIONS
 
-typedef struct
-{
-	vec3_t	position;
-	vec3_t	angles_deg;
-	vec3_t	angles_rad;
-} camera_t;
-
 static camera_t camera;
+static vec3_t lastPos;
+static eboolean colliding;
 
 static void camera_init();
 static void camera_rotateX(float degree);
@@ -172,34 +168,42 @@ static void input_update(int timeStep)
 	double translateLength;
 	double movePerMillisecond = .1;
 
-	translateLength = timeStep * movePerMillisecond + (weaponCharge * Player.weapon.chargeSpeed);
+	translateLength = timeStep * movePerMillisecond + (weaponCharge * Player.weapon.chargeSpeed * movePerMillisecond * timeStep);
 	double bobStep = timeStep*movePerMillisecond/13;
-	printf("Time: %d\n", timeStep);
 
-	//WASD
-	//The input values are arbitrary
-	if(keys_down[SDLK_w]){
-		camera_translateForward(translateLength);
-	}
-	if(keys_down[SDLK_s]){
-		camera_translateForward(-translateLength);
-	}
-	if(keys_down[SDLK_a]){
-		camera_translateStrafe(translateLength);
-	}
-	if(keys_down[SDLK_d]){
-		camera_translateStrafe(-translateLength);
+	if(simpleTest(camera)){
+		colliding = etrue;
+		collideAction(camera, translateLength);
 	}
 
-	if(keys_down[SDLK_1]){
-			Player.weapon = currentWeapon[0];
+	else{
+		//WASD
+		//The input values are arbitrary
+		if(keys_down[SDLK_w]){
+			camera_translateForward(translateLength);
 		}
-	if(keys_down[SDLK_2]){
-			Player.weapon = currentWeapon[1];
+		if(keys_down[SDLK_s]){
+			camera_translateForward(-translateLength);
 		}
-	if(keys_down[SDLK_3]){
-			Player.weapon = currentWeapon[2];
+		if(keys_down[SDLK_a]){
+			camera_translateStrafe(translateLength);
 		}
+		if(keys_down[SDLK_d]){
+			camera_translateStrafe(-translateLength);
+		}
+
+		if(keys_down[SDLK_1]){
+				Player.weapon = currentWeapon[0];
+			}
+		if(keys_down[SDLK_2]){
+				Player.weapon = currentWeapon[1];
+			}
+		if(keys_down[SDLK_3]){
+				Player.weapon = currentWeapon[2];
+			}
+
+		colliding = efalse;
+	}
 
 	if(keys_down[SDLK_e]){
 		weaponCharge = 1;
@@ -237,6 +241,15 @@ static void camera_init()
 	glmatrix_identity(translateMatrix);
 }
 
+static void collideAction(camera_t camera, double length){
+	if(keys_down[SDLK_w]){
+		camera_translateForward(-length);
+	}
+	if(keys_down[SDLK_s]){
+		camera_translateForward(length);
+	}
+}
+
 //Rotations just increase/decrease the angle and compute a new radian value.
 static void camera_rotateX(float degree)
 {
@@ -272,6 +285,12 @@ static void camera_translateForward(float dist)
 	dy =  0.0;
 	dz =  -cosY * dist;
 
+	if(colliding == efalse){
+		lastPos[_X] = camera.position[_X];
+		lastPos[_Y] = camera.position[_Y];
+		lastPos[_Z] = camera.position[_Z];
+	}
+
 	camera.position[_X] += dx;
 	camera.position[_Y] += dy;
 	camera.position[_Z] += dz;
@@ -298,6 +317,12 @@ static void camera_translateStrafe(float dist)
 	//dx =  -sinY * dist;
 	//dy =  0.0;
 	//dz =  -cosY * dist;
+
+	if(colliding == efalse){
+		lastPos[_X] = camera.position[_X];
+		lastPos[_Y] = camera.position[_Y];
+		lastPos[_Z] = camera.position[_Z];
+	}
 
 	camera.position[_X] += dx;
 	camera.position[_Y] += dy;
@@ -499,7 +524,7 @@ static void r_init()
 				&myGLTexture[2], &myTexWidth[2], &myTexHeight[2], &myTexBPP[2]);
 
 	renderer_model_loadASE("ASEmodels\\myskybox.ASE", efalse);
-	renderer_model_loadASE("ASEmodels\\arch.ASE", efalse);
+	renderer_model_loadASE("ASEmodels\\arch.ASE", etrue);
 	renderer_model_loadASE("ASEmodels\\weapon1.ASE", efalse);
 	renderer_model_loadASE("ASEmodels\\spear.ASE", efalse);
 	renderer_model_loadASE("ASEmodels\\lance.ASE", efalse);
