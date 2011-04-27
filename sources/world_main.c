@@ -81,11 +81,8 @@ eboolean simpleTest(camera_t camera, collisionTri_t * failTriangle){
 		}
 
 		myX = camera.position[0]; myY = camera.position[1]; myZ = camera.position[2];
-		xMax = xMax + 5; yMax = yMax + 3; zMax = zMax + 3;
-		xMin = xMin - 5; yMin = yMin - 3; zMin = zMin - 3;
 
-
-		if(myX >= xMin && myX <= xMax && myY >= yMin && myY <= yMax && myZ >= zMin && myZ <= zMax){
+		if(myX >= xMin && myX <= xMax &&  myZ >= zMin && myZ <= zMax && myY >= yMin && myY <= yMax){	// && myY >= yMin && myY <= yMax && myZ >= zMin && myZ <= zMax){
 			failTriangle->verts[0][0] = xMin; failTriangle->verts[1][0] = xMax;
 			failTriangle->verts[0][2] = yMin; failTriangle->verts[1][2] = yMax;
 			failTriangle->verts[0][1] = zMin; failTriangle->verts[1][1] = zMax;

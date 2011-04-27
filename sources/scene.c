@@ -554,7 +554,7 @@ static void r_init()
 	Player.weapon = currentWeapon[2];
 
 	camera_init();
-	camera.position[_Z] += 200;
+	camera.position[_Z] += 250;
 	camera.position[_Y] += 15;
 
 	r_setupProjection();
